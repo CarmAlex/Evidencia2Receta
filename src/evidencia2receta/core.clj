@@ -17,5 +17,23 @@
   (let [estilo (get colores tipo "")]
     (str "<span style=\"" estilo "\">" texto "</span>")))
 
+(def (leer-archivo [ruta]
+  (with-open [rdr (clojure.java.io/reader ruta)]
+    (doall (line-seq rdr)))))
+
+;; --- Función para procesar una receta y aplicar estilos ---
+(defn procesar-receta [receta]
+  (let [lineas (clojure.string/split-lines receta)]
+    (mapv
+      (fn [linea]
+        (cond
+          (re-matches #"\d+\.\s.*" linea) (span-con-estilo linea :step-number)
+          (re-matches #"\d+\s.*" linea) (span-con-estilo linea :quantity)
+          (re-matches #".*:\s.*" linea) (span-con-estilo linea :ingredient)
+          :else (span-con-estilo linea :default)))
+      lineas)))
+
+
+
 (println
 (slurp "../../resources/Lemon Cake-1.txt"))
