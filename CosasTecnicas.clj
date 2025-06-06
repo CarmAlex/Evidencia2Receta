@@ -18,16 +18,16 @@
 (defn tazaAg [ing]
   (let [cantidad (parse-fraction (first ing))
         ingrediente (nth ing 2) 
-        conversiones {"granulated sugar" 200
-                      "all-purpose flour" 125
-                      "cocoa powder" 151
-                      "powdered sugar" 120
-                      "butter" 227
-                      "water" 236
-                      "chocolate chips" 170
-                      "canola oil" 217
-                      "olive oil" 217
-                      "grated cheese" 100
+        conversiones {"granulated sugar" 200 
+                      "all-purpose flour" 125 
+                      "cocoa powder" 151 
+                      "powdered sugar" 120 
+                      "butter" 227 
+                      "water" 236 
+                      "chocolate chips" 170 
+                      "canola oil" 217 
+                      "olive oil" 217 
+                      "grated cheese" 100 
                       }           
         gramos (get conversiones ingrediente 0)]
         (if gramos (* cantidad gramos)
@@ -82,4 +82,4 @@
 ;Para contar los pasos
 ;(defn contador [x])
 
-(map tbAg listaChida)
+(map tazaAg listaChida)
