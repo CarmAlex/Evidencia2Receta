@@ -1,6 +1,6 @@
 
 ; Conversión de tazas a gramos
-(def listaChida '(("1/2" "TB" "granulated sugar") 
+(def listaChida '(("1/2" "cup" "granulated sugar") 
                   ("1" "TB" "all-purpose flour") 
                   ("3/4" "TB" "butter"))
 )
@@ -14,27 +14,30 @@
          (Double/parseDouble (second parts))))))
 
 
-;Taza a gramos dependiendo del ingrediente
+
+; Taza a gramos y calorías 
 (defn tazaAg [ing]
   (let [cantidad (parse-fraction (first ing))
-        ingrediente (nth ing 2) 
-        conversiones {"granulated sugar" 200 
-                      "all-purpose flour" 125 
-                      "cocoa powder" 151 
-                      "powdered sugar" 120 
-                      "butter" 227 
-                      "water" 236 
-                      "chocolate chips" 170 
-                      "canola oil" 217 
-                      "olive oil" 217 
-                      "grated cheese" 100 
-                      }           
-        gramos (get conversiones ingrediente 0)]
-        (if gramos (* cantidad gramos)
-        "ingrediente no encontrado"
-        )
-  )
-)
+        ingrediente (nth ing 2)
+        conversiones {
+          "granulated sugar" {:gramos 200, :calorias 774},
+          "all-purpose flour" {:gramos 125, :calorias 455},
+          "cocoa powder" {:gramos 151, :calorias 342},
+          "powdered sugar" {:gramos 120, :calorias 467},
+          "butter" {:gramos 227, :calorias 1628},
+          "water" {:gramos 236, :calorias 0},
+          "chocolate chips" {:gramos 170, :calorias 805},
+          "canola oil" {:gramos 217, :calorias 1927},
+          "olive oil" {:gramos 217, :calorias 1927},
+          "grated cheese" {:gramos 100, :calorias 400}
+        }
+        
+        datos (get conversiones ingrediente)]
+    
+    (if datos
+      {:gramos (* cantidad (:gramos datos)),
+       :calorias (* cantidad (:calorias datos))}
+      "Ingrediente no encontrado")))
 
 ;cucharadas a gramos
 (defn tbAg [ing]
@@ -79,7 +82,12 @@
   (/ (f - 32) (5 / 9))
 )
 
-;Para contar los pasos
-;(defn contador [x])
+;para ver que conversion hacer
+(defn convertidor [lista]
+  (cond
+    (= (second lista) "cup") (map tazaAg lista)
+    :else "no"
+  )
+)
 
-(map tazaAg listaChida)
+(convertidor listaChida)
