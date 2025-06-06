@@ -17,5 +17,5 @@
   (let [estilo (get colores tipo "")]
     (str "<span style=\"" estilo "\">" texto "</span>")))
 
-(println
-(slurp "../../resources/Lemon Cake-1.txt"))
+
+(slurp "../../resources/Lemon Cake-1.txt")
