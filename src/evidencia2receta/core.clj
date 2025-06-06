@@ -1,6 +1,4 @@
-
-(ns evidencia2receta.core)
-
+ (ns evidencia2receta.core)
 ;; --- Mapa de colores y estilos (similar al hash de Racket) ---
 (def colores
   {:quantity  "color: yellow; font-weight: bold;"
@@ -18,3 +16,6 @@
 (defn span-con-estilo [texto tipo]
   (let [estilo (get colores tipo "")]
     (str "<span style=\"" estilo "\">" texto "</span>")))
+
+(println
+(slurp "../../resources/Lemon Cake-1.txt"))
