@@ -20,8 +20,8 @@
   (let [cantidad (parse-fraction (first ing))
         ingrediente (nth ing 2)
         conversiones {
-          "granulated sugar" {:gramos 200, :calorias 774},
-          "all-purpose flour" {:gramos 125, :calorias 455},
+          "granulated sugar" {:gramos 200, :calorias 714},
+          "all-purpose flour" {:gramos 125, :calorias 440},
           "cocoa powder" {:gramos 151, :calorias 342},
           "powdered sugar" {:gramos 120, :calorias 467},
           "butter" {:gramos 227, :calorias 1628},
@@ -29,7 +29,8 @@
           "chocolate chips" {:gramos 170, :calorias 805},
           "canola oil" {:gramos 217, :calorias 1927},
           "olive oil" {:gramos 217, :calorias 1927},
-          "grated cheese" {:gramos 100, :calorias 400}
+          "grated cheese" {:gramos 100, :calorias 400},
+          "chopped parsley" {:gramos 100, :calorias 100}
         }
         
         datos (get conversiones ingrediente)]
@@ -43,15 +44,17 @@
 (defn tbAg [ing]
   (let [cantidad (parse-fraction (first ing))
     ingrediente (nth ing 2)
-    conversiones { "water" 15
-                   "vanilla extract" 13.3
-                   "vinegar" 15
-                   "vegetable oil" 13.8     
-                   "butter" 14.4             
+    conversiones { "water" {:gramos 15, :calorias 0},
+                   "vanilla extract" {:gramos 13, :calorias 37},
+                   "vinegar" {:gramos 15, :calorias 0},
+                   "vegetable oil" {:gramos 13, :calorias 120},
+                   "butter" {:gramos 14, :calorias 110}        
                 }
-        gramos (get conversiones ingrediente 0)]
-        (if gramos (* cantidad gramos)
-        "ingrediente no encontrado"
+        datos (get conversiones ingrediente 0)]
+        (if datos 
+        {:gramos (* cantidad (:gramos datos)),
+         :calorias (* cantidad (:calorias datos))}
+        "Ingrediente no encontrado"
         )      
   )
 )
@@ -60,14 +63,21 @@
 (defn tAg [ing]
   (let [cantidad (parse-fraction (first ing))
     ingrediente (nth ing 2)
-    conversiones { "baking powder" 4
-                   "baking soda" 3
-                   "salt" 6
-                   "vanilla" 4
+    conversiones { "baking powder" {:gramos 4.5, :calorias 5},
+                   "baking soda" {:gramos 3.4, :calorias 0},
+                   "salt" {:gramos 6, :calorias 0},
+                   "vanilla extract" {:gramos 4, :calorias 12},
+                   "granulated sugar" {:gramos 4.2, :calorias 15},
+                   "dried oregano" {:gramos 1, :calorias 3},
+                   "red pepper flakes" {:gramos 1, :calorias 0},
+                   "smoked paprika" {:gramos 1, :calorias 1}
+                   
     }
-    gramos (get conversiones ingrediente 0)]
-    (if gramos (* cantidad gramos)
-    "ingrediente no encontrado"
+    datos (get conversiones ingrediente 0)]
+    (if datos 
+    {:gramos (* cantidad (:gramos datos))
+     :calorias (* cantidad (:calorias datos))}
+    "Ingrediente no encontrado"
     )
   )
 )
@@ -90,4 +100,6 @@
   )
 )
 
-(convertidor listaChida)
+;(convertidor listaChida)
+
+(map tazaAg listaChida)
