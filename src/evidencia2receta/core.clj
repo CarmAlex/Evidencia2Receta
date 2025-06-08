@@ -19,34 +19,37 @@
     (str "<span style=\"" estilo "\">" texto "</span>")))
 
 ;; resalta temperaturas en formato °F
-(defn resaltar-temperaturas [texto]
-  (str/replace texto
+(defn resaltar-temperatura [linea opciones]
+  (str/replace linea
                #"(?i)(\d+)\s*\u00b0F"
-               #(span % :temperature)))
+               (fn [[_ temp-str]]
+                 (let [f (Double/parseDouble temp-str)
+                       valor (if (= (:temperatura opciones) :celsius)
+                               (Math/round (fAc f)) ; ← definida en CosasTecnicas
+                               f)
+                       unidad (if (= (:temperatura opciones) :celsius) "°C" "°F")]
+                   (span (str valor unidad) :temperature)))))
 
-; implementacion de CosasTecnicas
+;; implementacion de CosasTecnicas irá aquí
+;; ----------------------------------------
 
 
 
 
 
-
-
-
-
-;; convierte a número decimal
-(defn escalar-cantidad [cantidad-str factor]
-  (let [parse (fn [s]
-                (if (re-find #"/" s)
-                  (let [[a b] (str/split s #"/")]
-                    (/ (Double/parseDouble a) (Double/parseDouble b)))
-                  (Double/parseDouble s)))
-        parts (str/split cantidad-str #" ")
-        total (reduce + (map parse parts))]
+;; convierte a número decimal escalado
+(defn escalar-numero [texto factor]
+  (let [parsear (fn [s]
+                  (if (re-find #"/" s)
+                    (let [[a b] (str/split s #"/")]
+                      (/ (Double/parseDouble a) (Double/parseDouble b)))
+                    (Double/parseDouble s)))
+        partes (str/split texto #" ")
+        total (reduce + (map parsear partes))]
     (* total factor)))
 
 ;; redondea cantidades decimales a formatos como "1 1/4"
-(defn redondear [n]
+(defn redondear-cantidad [n]
   (if (nil? n) ""
       (let [ent (int n)
             frac (- n ent)]
@@ -58,14 +61,15 @@
           :else (str (inc ent))))))
 
 ;; resalta una línea de ingrediente con cantidad escalada
-(defn resaltar-ingrediente [linea factor]
+(defn resaltar-ingrediente [linea factor opciones]
   (let [regex #"^\s*(\d+(?:\s+\d+/\d+)?|\d+/\d+)?\s*(cup|cups|tsp|tsps|tbsp|tbsps|teaspoons?|tablespoons?|grams?|g|kg|ml|oz|ounces?|pounds?|lbs?|eggs?)?\s*(.*)"
         [_ cantidad unidad resto] (re-matches regex linea)
-        cantidad-nueva (if (and cantidad factor)
-                         (redondear (escalar-cantidad cantidad factor))
+        nueva-cantidad (if (and cantidad factor)
+                         (redondear-cantidad (escalar-numero cantidad factor))
                          cantidad)]
-    (str (when (and cantidad-nueva (not (str/blank? cantidad-nueva)))
-           (str (span cantidad-nueva :quantity) " "))
+    ;; futura conversión a gramos se integra aquí
+    (str (when (and nueva-cantidad (not (str/blank? nueva-cantidad)))
+           (str (span nueva-cantidad :quantity) " "))
          (when (and unidad (not (str/blank? unidad)))
            (str (span unidad :unit) " "))
          (if (not (str/blank? resto))
@@ -74,8 +78,8 @@
 
 ;; lee un archivo de texto y devuelve sus líneas
 (defn leer-archivo [ruta]
-  (with-open [rdr (io/reader ruta)]
-    (doall (line-seq rdr))))
+  (with-open [lector (io/reader ruta)]
+    (doall (line-seq lector))))
 
 ;; extrae partes estructuradas de una receta en texto plano
 (defn leer-receta [ruta]
@@ -95,7 +99,7 @@
     receta))
 
 ;; extrae el número original de porciones desde el texto meta
-(defn extraer-porciones [meta]
+(defn obtener-porciones [meta]
   (some (fn [linea]
           (when-let [[_ _ n] (re-find #"(?i)serv(es|ings)\s*[-:]?\s*(\d+)" linea)]
             (Integer/parseInt n)))
@@ -104,7 +108,7 @@
 ;; genera HTML resaltado para una receta aplicando escalado
 (defn generar-html [ruta opciones]
   (let [{:keys [titulo meta ingredientes instrucciones]} (leer-receta ruta)
-        originales (extraer-porciones meta)
+        originales (obtener-porciones meta)
         deseadas (:porciones opciones)
         factor (if (and originales (pos? originales))
                  (/ deseadas originales)
@@ -115,13 +119,13 @@
          "<h2>Detalles</h2><ul>"
          (apply str (map #(str "<li>" (if (re-find #"(?i)serves" %)
                                         (span % :serves)
-                                        (resaltar-temperaturas %))
+                                        (resaltar-temperatura % opciones))
                                "</li>")
                          meta))
          "</ul>"
 
          "<h2>Ingredientes</h2><ul>"
-         (apply str (map #(str "<li>" (resaltar-ingrediente % factor) "</li>")
+         (apply str (map #(str "<li>" (resaltar-ingrediente % factor opciones) "</li>")
                          ingredientes))
          "</ul>"
 
@@ -129,7 +133,7 @@
          (apply str (map-indexed (fn [i paso]
                                    (str "<li>"
                                         (span (str (inc i) ".") :step-number)
-                                        " " (resaltar-temperaturas paso)
+                                        " " (resaltar-temperatura paso opciones)
                                         "</li>"))
                                  instrucciones))
          "</ol>"
@@ -137,14 +141,14 @@
          "</body></html>")))
 
 ;; guarda un archivo HTML procesado en carpeta src
-(defn guardar-html [archivo-salida archivo-receta opciones]
-  (spit archivo-salida (generar-html archivo-receta opciones)))
+(defn guardar-html [salida ruta opciones]
+  (spit salida (generar-html ruta opciones)))
 
 ;; función principal para procesar todas las recetas
-(defn procesar-todas-las-recetas []
+(defn procesar-recetas []
   (let [directorio "resources"         ;; carpeta con archivos .txt
-        salida-dir "src"               ;; salida directa a src/
-        opciones (settings/leer-opciones "options.txt") ;; lectura dinámica
+        destino "src"                  ;; salida directa a src/
+        opciones (settings/leer-opciones "options.txt")
         filtro (str/lower-case (:filtro opciones))
         archivos (filter #(and (.isFile %)
                                (str/ends-with? (.getName %) ".txt"))
@@ -152,18 +156,17 @@
 
     ;; procesamiento funcional
     (doseq [archivo archivos]
-      (let [ruta-in (.getPath archivo)
-            receta (leer-receta ruta-in)
-            texto-completo (str/join " " (concat [(:titulo receta)]
-                                                 (:meta receta)
-                                                 (:ingredientes receta)
-                                                 (:instrucciones receta)))
+      (let [ruta (.getPath archivo)
+            receta (leer-receta ruta)
+            contenido (str/join " " (concat [(:titulo receta)]
+                                            (:meta receta)
+                                            (:ingredientes receta)
+                                            (:instrucciones receta)))
             incluir? (or (= filtro "all")
-                         (str/includes? (str/lower-case texto-completo) filtro))]
-
+                         (str/includes? (str/lower-case contenido) filtro))]
         (when incluir?
           (let [nombre (.getName archivo)
                 nombre-html (str/replace nombre #"\.txt$" ".html")
-                ruta-out (str salida-dir "/" nombre-html)]
+                ruta-html (str destino "/" nombre-html)]
             (println "Procesando:" nombre "→" nombre-html)
-            (guardar-html ruta-out ruta-in opciones)))))))
+            (guardar-html ruta-html ruta opciones)))))))
