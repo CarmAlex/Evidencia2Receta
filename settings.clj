@@ -2,10 +2,6 @@
 (require '[clojure.string :as str]) 
 
 
-; sistema: metrico o tazas(incluye tsp y tbsp)
-; temperatura: Fahrenheit o Celsius
-; porciones: 
-; filtro: all, dessert, savory
 
 ; funcion para leer el .txt
 (defn leer-opciones [archivo]
@@ -25,7 +21,7 @@
     mapa))
 
 
-; metrico o tazas
+; sistema: metrico o tazas(incluye tsp y tbsp)
 (defn metrOtz [opcion]
     (if (= opcion "metric")
         "t"
@@ -33,10 +29,25 @@
     )
 )
 
+; temperatura: Fahrenheit o Celsius
+(defn temperatura [opcion]
+    (if (= opcion "C")
+        "t"
+        "f"
+    )
+)
+
+; porciones: formula chida para poder dividir los ingredientes con las porciones para luego hacer ajustes
+
+
+; filtro: all, dessert, savory con un cond
+
 (defn procesar-opciones [archivo]
   (let [opciones (leer-opciones archivo)]
     {:sistema (metrOtz (:sistema opciones))
-     ; Puedes añadir más procesamientos aquí
+     :temp (temperatura (:temp opciones))
+     :porciones  (:porciones opciones)
+     :filtra (:filtra opciones)
      }))
 
 
