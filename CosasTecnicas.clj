@@ -1,5 +1,5 @@
 
-; Conversión de tazas a gramos
+; lista de prueba
 (def listaChida '(("1/2" "cup" "granulated sugar") 
                   ("1" "TB" "all-purpose flour") 
                   ("3/4" "TB" "butter"))
@@ -29,8 +29,11 @@
           "chocolate chips" {:gramos 170, :calorias 805},
           "canola oil" {:gramos 217, :calorias 1927},
           "olive oil" {:gramos 217, :calorias 1927},
-          "grated cheese" {:gramos 100, :calorias 400},
-          "chopped parsley" {:gramos 100, :calorias 100}
+          "grated Parmesan cheese" {:gramos 90, :calorias 1650},
+          "grated Romano cheese" {:gramos 112, :calorias 800},
+          "chopped parsley" {:gramos 60, :calorias 16},
+          "fresh lemon juice" {:gramos 240, :calorias 60},
+          "almond flour" {:gramos 95, :calorias 640}
         }
         
         datos (get conversiones ingrediente)]
@@ -50,7 +53,7 @@
                    "vegetable oil" {:gramos 13, :calorias 120},
                    "butter" {:gramos 14, :calorias 110}        
                 }
-        datos (get conversiones ingrediente 0)]
+        datos (get conversiones ingrediente)]
         (if datos 
         {:gramos (* cantidad (:gramos datos)),
          :calorias (* cantidad (:calorias datos))}
@@ -70,10 +73,11 @@
                    "granulated sugar" {:gramos 4.2, :calorias 15},
                    "dried oregano" {:gramos 1, :calorias 3},
                    "red pepper flakes" {:gramos 1, :calorias 0},
-                   "smoked paprika" {:gramos 1, :calorias 1}
+                   "smoked paprika" {:gramos 1, :calorias 1},
+                   "black pepper" {:gramos 2.3, :calorias 5}
                    
     }
-    datos (get conversiones ingrediente 0)]
+    datos (get conversiones ingrediente)]
     (if datos 
     {:gramos (* cantidad (:gramos datos))
      :calorias (* cantidad (:calorias datos))}
@@ -92,14 +96,5 @@
   (/ (f - 32) (5 / 9))
 )
 
-;para ver que conversion hacer
-(defn convertidor [lista]
-  (cond
-    (= (second lista) "cup") (map tazaAg lista)
-    :else "no"
-  )
-)
-
-;(convertidor listaChida)
-
-(map tazaAg listaChida)
+;caso de prueba
+;(map tazaAg listaChida)
