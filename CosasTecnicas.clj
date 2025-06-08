@@ -86,6 +86,52 @@
   )
 )
 
+;ew sistema imperial
+(defn onzasAg [ing]
+  (let [cantidad (parse-fraction (first ing))
+    ingrediente (nth ing 2)
+    conversiones { "dry fettuccine pasta" {:gramos 28.3, :calorias 100}
+    }
+    datos (get conversiones ingrediente)
+  ]
+  (if datos
+  {:gramos (* cantidad (:gramos datos))
+   :calorias (* cantidad (:calorias datos))}
+   "Ingrediente no encontrado"
+  )
+  )
+)
+
+(defn librasAg [ing]
+  (let [cantidad (parse-fraction (first ing))
+    ingrediente (nth ing 2)
+    conversiones { "New York Strip Steaks" {:gramos 453.6, :calorias 997.92}
+    }
+    datos (get conversiones ingrediente)
+  ]
+  (if datos
+  {:gramos (* cantidad (:gramos datos))
+   :calorias (* cantidad (:calorias datos))}
+   "Ingrediente no encontrado"
+  )
+  )
+)
+
+(defn pintsAg [ing]
+  (let [cantidad (parse-fraction (first ing))
+    ingrediente (nth ing 2)
+    conversiones { "heavy cream" {:gramos 470.3, :calorias 1600}
+    }
+    datos (get conversiones ingrediente)
+  ]
+  (if datos
+  {:gramos (* cantidad (:gramos datos))
+   :calorias (* cantidad (:calorias datos))}
+   "Ingrediente no encontrado"
+  )
+  )
+)
+
 ;celsius a fahrenheit
 (defn cAf [c]  
   (+ (* c (9 / 5)) 32)
