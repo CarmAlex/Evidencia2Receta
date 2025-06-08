@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.java.io :as io]))
 
+
 ;; estilos por categoría
 (def estilos
   {:quantity     "color: orange; font-weight: bold;"
@@ -24,7 +25,7 @@
 
 ;; resaltar cantidades e ingredientes etc
 (defn resaltar-ingrediente [linea]
-  (let [regex #"^\s*(\d+(?:\s+\d+/\d+)?|\d+/\d+)?\s*(cup|cups|tsp|tbsp|teaspoon|tablespoon|grams?|g|kg|ml|oz|ounces?|pounds?|lb|eggs?)?\s*(.*)"
+  (let [regex #"^\s*(\d+(?:\s+\d+/\d+)?|\d+/\d+)?\s*(cup|cups|tsp|tsps|tbsp|tbsps|teaspoons?|tablespoons?|grams?|g|kg|ml|oz|ounces?|pounds?|lbs?|eggs?)?\s*(.*)"
         [_ cantidad unidad resto] (re-matches regex linea)]
     (str (when (and cantidad (not (str/blank? cantidad)))
            (str (span cantidad :quantity) " "))
@@ -34,7 +35,6 @@
            (span resto :ingredient)
            linea))))
 
-;; leer archivo de texto
 (defn leer-archivo [ruta]
   (with-open [rdr (io/reader ruta)]
     (doall (line-seq rdr))))
@@ -46,18 +46,20 @@
         [meta resto1] (split-with #(not (re-find #"(?i)^ingredients$" %)) resto)
         [_ & resto2] resto1
         [ingredientes resto3] (split-with #(not (re-find #"(?i)^instructions$" %)) resto2)
-        [_ & instrucciones] resto3]
-    {:titulo (str/trim titulo)
-     :meta (remove str/blank? meta)
-     :ingredientes (remove str/blank? ingredientes)
-     :instrucciones (remove str/blank? instrucciones)}))
+        [_ & instrucciones] resto3
+        receta {:titulo (str/trim titulo)
+                :meta (remove str/blank? meta)
+                :ingredientes (remove str/blank? ingredientes)
+                :instrucciones (remove str/blank? instrucciones)}]
+    (when (or (empty? (:ingredientes receta)) (empty? (:instrucciones receta)))
+      (println "⚠️ Estructura incompleta en receta:" ruta))
+    receta))
 
 ;; generar html
 (defn generar-html [ruta]
   (let [{:keys [titulo meta ingredientes instrucciones]} (leer-receta ruta)]
     (str "<html><head><meta charset=\"UTF-8\"></head><body>"
          "<h1>" (span titulo :default) "</h1>"
-
          "<h2>Detalles</h2><ul>"
          (apply str (map #(str "<li>" (if (re-find #"(?i)serves" %)
                                         (span % :serves)
@@ -94,9 +96,10 @@
 
 ;; procesar los .txt de las recetas
 (defn procesar-todas-las-recetas []
-  (let [directorio "resource"
+  (let [directorio "resources" ; corregido aquí
         salida-dir "salidas"]
     (asegurar-directorio salida-dir)
+    ;; (def opciones (settings/leer-opciones "options.txt")) ; ← listo para activar
     (let [archivos (filter #(and (.isFile %)
                                  (str/ends-with? (.getName %) ".txt"))
                            (.listFiles (io/file directorio)))]
