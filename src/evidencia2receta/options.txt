@@ -1,0 +1,4 @@
+sistema: metrico
+temperatura: Celsius
+porciones: 4
+filtro: all

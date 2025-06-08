@@ -24,7 +24,17 @@
                #"(?i)(\d+)\s*\u00b0F"
                #(span % :temperature)))
 
-;; convierte cantidades como "1 1/2" o "3/4" en número decimal
+; implementacion de CosasTecnicas
+
+
+
+
+
+
+
+
+
+;; convierte a número decimal
 (defn escalar-cantidad [cantidad-str factor]
   (let [parse (fn [s]
                 (if (re-find #"/" s)
