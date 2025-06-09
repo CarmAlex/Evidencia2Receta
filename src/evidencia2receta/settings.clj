@@ -18,11 +18,12 @@
 
 ;; Sistema: métrico o tazas (t para true/métrico)
 (defn metrOtz [opcion]
-  (if (= opcion "metric") "t" "f"))
+  (= opcion "metric"))
 
-;; Temperatura: Celsius o Fahrenheit
+;; Temperatura: Celsius o Farenheit
 (defn temperatura [opcion]
-  (if (= opcion "C") "t" "f"))
+  (= opcion "C"))
+
 
 ;; Procesa todas las opciones y devuelve el mapa esperado por core.clj
 (defn procesar-opciones [archivo]
