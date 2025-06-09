@@ -1,10 +1,7 @@
 # Proyecto: Evidencia 2 - Recetas Funcionales
 
-## Cómo ejecutar
-1. Abrir un REPL en el proyecto.
-2. Ejecutar:
-   (require '[evidencia2receta.core :refer [procesar-multiples-recetas]])
-   (procesar-multiples-recetas)
+## Ejecutar
+1. Ejecutar: clj -M -m evidencia2receta.core
 
 ## Qué hace
 - Lee recetas desde resources.
