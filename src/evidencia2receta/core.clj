@@ -1,7 +1,7 @@
 (ns evidencia2receta.core
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
-            [evidencia2receta.settings :refer [procesar-opciones]]))
+            [evidencia2receta.settings :as settings]))
 
 ;; estilos por categoría para resaltado HTML
 (def estilos
@@ -13,240 +13,221 @@
    :serves       "color: magenta; font-weight: bold;"
    :default      ""})
 
-;; genera un <span> con estilo para una categoría dada
 (defn span [texto tipo]
   (let [estilo (get estilos tipo "")]
     (str "<span style=\"" estilo "\">" texto "</span>")))
 
-;; ----------------------------------------------------------
-;; implementacion de CosasTecnicas (parseo, conversión, etc.)
-;; ----------------------------------------------------------
-
+;; función para convertir fracciones tipo 1/2 o 1 1/4 a decimal
 (defn parse-fraction [frac]
-  (let [parts (str/split frac #"/")]
-    (if (= (count parts) 1)
-      (Double/parseDouble (first parts))
-      (/ (Double/parseDouble (first parts))
-         (Double/parseDouble (second parts))))))
+  (let [parts (str/split frac #" ")]
+    (reduce + (map (fn [s]
+                     (if (str/includes? s "/")
+                       (let [[a b] (str/split s #"/")]
+                         (/ (Double/parseDouble a) (Double/parseDouble b)))
+                       (Double/parseDouble s)))
+                   parts))))
 
-(defn tazaAg [ing]
-  (let [cantidad (parse-fraction (first ing))
-        ingrediente (nth ing 2)
-        conversiones {"granulated sugar" {:gramos 200, :calorias 714},
-                      "all-purpose flour" {:gramos 125, :calorias 440},
-                      "cocoa powder" {:gramos 151, :calorias 342},
-                      "powdered sugar" {:gramos 120, :calorias 467},
-                      "butter" {:gramos 227, :calorias 1628},
-                      "water" {:gramos 236, :calorias 0},
-                      "chocolate chips" {:gramos 170, :calorias 805},
-                      "canola oil" {:gramos 217, :calorias 1927},
-                      "olive oil" {:gramos 217, :calorias 1927},
-                      "grated Parmesan cheese" {:gramos 90, :calorias 1650},
-                      "grated Romano cheese" {:gramos 112, :calorias 800},
-                      "chopped parsley" {:gramos 60, :calorias 16},
-                      "fresh lemon juice" {:gramos 240, :calorias 60},
-                      "almond flour" {:gramos 95, :calorias 640}}
-        datos (get conversiones ingrediente)]
-    (if datos
-      {:gramos (* cantidad (:gramos datos))
-       :calorias (* cantidad (:calorias datos))}
-      nil)))
+;; funciones de conversión por unidad
+(def conversiones
+  {"cup" {"granulated sugar" {:gramos 200, :calorias 714}
+          "all-purpose flour" {:gramos 125, :calorias 440}
+          "cocoa powder" {:gramos 151, :calorias 342}
+          "powdered sugar" {:gramos 120, :calorias 467}
+          "butter" {:gramos 227, :calorias 1628}
+          "water" {:gramos 236, :calorias 0}
+          "chocolate chips" {:gramos 170, :calorias 805}
+          "canola oil" {:gramos 217, :calorias 1927}
+          "olive oil" {:gramos 217, :calorias 1927}
+          "grated Parmesan cheese" {:gramos 90, :calorias 1650}
+          "grated Romano cheese" {:gramos 112, :calorias 800}
+          "chopped parsley" {:gramos 60, :calorias 16}
+          "fresh lemon juice" {:gramos 240, :calorias 60}
+          "almond flour" {:gramos 95, :calorias 640}}
+   "tbsp" {"vanilla extract" {:gramos 13, :calorias 37}
+           "vinegar" {:gramos 15, :calorias 0}
+           "vegetable oil" {:gramos 13, :calorias 120}
+           "butter" {:gramos 14, :calorias 110}
+           "water" {:gramos 15, :calorias 0}}
+   "tsp" {"baking powder" {:gramos 4.5, :calorias 5}
+          "baking soda" {:gramos 3.4, :calorias 0}
+          "salt" {:gramos 6, :calorias 0}
+          "vanilla extract" {:gramos 4, :calorias 12}
+          "granulated sugar" {:gramos 4.2, :calorias 15}
+          "dried oregano" {:gramos 1, :calorias 3}
+          "red pepper flakes" {:gramos 1, :calorias 0}
+          "smoked paprika" {:gramos 1, :calorias 1}
+          "black pepper" {:gramos 2.3, :calorias 5}}
+   "oz" {"dry fettuccine pasta" {:gramos 28.3, :calorias 100}}
+   "lb" {"New York Strip Steaks" {:gramos 453.6, :calorias 997.92}}
+   "pint" {"heavy cream" {:gramos 470.3, :calorias 1600}}})
 
-(defn tbAg [ing]
-  (let [cantidad (parse-fraction (first ing))
-        ingrediente (nth ing 2)
-        conversiones {"water" {:gramos 15, :calorias 0},
-                      "vanilla extract" {:gramos 13, :calorias 37},
-                      "vinegar" {:gramos 15, :calorias 0},
-                      "vegetable oil" {:gramos 13, :calorias 120},
-                      "butter" {:gramos 14, :calorias 110}}
-        datos (get conversiones ingrediente)]
-    (if datos
-      {:gramos (* cantidad (:gramos datos))
-       :calorias (* cantidad (:calorias datos))}
-      nil)))
+(defn obtener-info [cantidad unidad ingrediente]
+  (let [unidad (str/lower-case (or unidad ""))
+        ingrediente (str/lower-case (or ingrediente ""))]
+    (if-let [info (get-in conversiones [unidad ingrediente])]
+      {:gramos (* cantidad (:gramos info))
+       :calorias (* cantidad (:calorias info))}
+      {:gramos 0 :calorias 0})))
 
-(defn tAg [ing]
-  (let [cantidad (parse-fraction (first ing))
-        ingrediente (nth ing 2)
-        conversiones {"baking powder" {:gramos 4.5, :calorias 5},
-                      "baking soda" {:gramos 3.4, :calorias 0},
-                      "salt" {:gramos 6, :calorias 0},
-                      "vanilla extract" {:gramos 4, :calorias 12},
-                      "granulated sugar" {:gramos 4.2, :calorias 15},
-                      "dried oregano" {:gramos 1, :calorias 3},
-                      "red pepper flakes" {:gramos 1, :calorias 0},
-                      "smoked paprika" {:gramos 1, :calorias 1},
-                      "black pepper" {:gramos 2.3, :calorias 5}}
-        datos (get conversiones ingrediente)]
-    (if datos
-      {:gramos (* cantidad (:gramos datos))
-       :calorias (* cantidad (:calorias datos))}
-      nil)))
+(defn cAf [c] (+ (* c 9/5) 32))
+(defn fAc [f] (/ (- f 32) 1.8))
 
-(defn fAc [f]
-  (/ (- f 32) (/ 9 5)))
+(defn resaltar-temperaturas [texto temp-metric?]
+  (str/replace texto
+               #"(?i)(\d+)\s*°F"
+               (fn [[_ fstr]]
+                 (let [f (Double/parseDouble fstr)
+                       convertido (if (= temp-metric? "t")
+                                    (format "%.1f °C" (fAc f))
+                                    (str f " °F"))]
+                   (span convertido :temperature)))))
 
-;convierte decimal a escalado
-(defn escalar-numero [texto factor]
-  (let [parsear (fn [s]
-                  (if (re-find #"/" s)
-                    (let [[a b] (str/split s #"/")]
-                      (/ (Double/parseDouble a) (Double/parseDouble b)))
-                    (Double/parseDouble s)))
-        partes (str/split texto #" ")
-        total (reduce + (map parsear partes))]
-    (* total factor)))
+(defn escalar-cantidad [cantidad-str factor]
+  (try
+    (let [valor (parse-fraction cantidad-str)]
+      (* valor factor))
+    (catch Exception _ 0)))
 
+(defn redondear [n]
+  (let [ent (int n)
+        frac (- n ent)]
+    (cond
+      (< frac 0.13) (str ent)
+      (< frac 0.38) (str ent " 1/4")
+      (< frac 0.63) (str ent " 1/2")
+      (< frac 0.88) (str ent " 3/4")
+      :else (str (inc ent)))))
 
-;redondear cantidades
-(defn redondear-cantidad [n]
-  (if (nil? n) ""
-      (let [ent (int n)
-            frac (- n ent)]
-        (cond
-          (< frac 0.01) (str ent)
-          (< frac 0.26) (str ent " 1/4")
-          (< frac 0.51) (str ent " 1/2")
-          (< frac 0.76) (str ent " 3/4")
-          :else (str (inc ent))))))
-
-(defn resaltar-temperatura [linea opciones]
-  (str/replace linea
-               #"(?i)(\d+)\s*\u00b0F"
-               (fn [[_ temp-str]]
-                 (let [f (Double/parseDouble temp-str)
-                       valor (if (= (:temp opciones) "t")
-                               (Math/round (fAc f))
-                               f)
-                       unidad (if (= (:temp opciones) "t") "°C" "°F")]
-                   (span (str valor unidad) :temperature)))))
-
-(defn resaltar-ingrediente [linea factor opciones]
+(defn resaltar-ingrediente [linea factor]
   (let [regex #"^\s*(\d+(?:\s+\d+/\d+)?|\d+/\d+)?\s*(\w+)?\s*(.*)"
         [_ cantidad unidad resto] (re-matches regex linea)
-        nueva-cantidad (if (and cantidad factor)
-                         (redondear-cantidad (escalar-numero cantidad factor))
-                         cantidad)]
-    (str (when (and nueva-cantidad (not (str/blank? nueva-cantidad)))
-           (str (span nueva-cantidad :quantity) " "))
-         (when (and unidad (not (str/blank? unidad)))
-           (str (span unidad :unit) " "))
-         (if (not (str/blank? resto))
-           (span resto :ingredient)
-           linea))))
-;; leer un archivo de texto y devuelve sus líneas
-(defn leer-archivo [ruta]
-  (with-open [lector (io/reader ruta)]
-    (doall (line-seq lector))))
+        esc (when (and cantidad factor)
+              (redondear (escalar-cantidad cantidad factor)))]
+    (str
+     (when esc (str (span esc :quantity) " "))
+     (when unidad (str (span unidad :unit) " "))
+     (when resto (span resto :ingredient)))))
 
-;; extrae partes estructuradas de una receta en texto plano
+(defn leer-archivo [ruta]
+  (with-open [rdr (io/reader ruta)]
+    (doall (line-seq rdr))))
+
+
+;lee la receta 
 (defn leer-receta [ruta]
   (let [lineas (leer-archivo ruta)
         [titulo & resto] (drop-while str/blank? lineas)
         [meta resto1] (split-with #(not (re-find #"(?i)^ingredients$" %)) resto)
         [_ & resto2] resto1
         [ingredientes resto3] (split-with #(not (re-find #"(?i)^instructions$" %)) resto2)
-        [_ & instrucciones] resto3
-        receta {:titulo (str/trim titulo)
-                :meta (remove str/blank? meta)
-                :ingredientes (remove str/blank? ingredientes)
-                :instrucciones (remove str/blank? instrucciones)}]
-    (when (or (empty? (:ingredientes receta)) (empty? (:instrucciones receta)))
-      (println "Estructura incompleta en receta:" ruta))
-    receta))
+        [_ & instrucciones] resto3]
+    {:titulo (str/trim titulo)
+     :meta (remove str/blank? meta)
+     :ingredientes (remove str/blank? ingredientes)
+     :instrucciones (remove str/blank? instrucciones)}))
 
-;; extrae el número original de porciones desde el texto meta
-(defn obtener-porciones [meta]
-  (some (fn [linea]
-          (when-let [[_ _ n] (re-find #"(?i)serv(es|ings)\s*[-:]?\s*(\d+)" linea)]
-            (Integer/parseInt n)))
-        meta))
+;; duplica las recetas para simular un conjunto grande de archivos
+(defn duplicar-recetas [archivos]
+  (take 100 (cycle archivos)))
 
-;; función para clasificar unidad y aplicar conversión a gramos y calorías
-(defn convertir-ingrediente [cantidad unidad nombre sistema]
-  (let [entrada [cantidad unidad nombre]]
-    (cond
-      (or (= sistema "f") (= sistema :cup))
-      (cond
-        (re-find #"(?i)^cup" unidad) (tazaAg entrada)
-        (re-find #"(?i)^tb" unidad) (tbAg entrada)
-        (re-find #"(?i)^tsp" unidad) (tAg entrada)
-        :else nil)
-      :else nil)))
+;; mide el tiempo de ejecución en milisegundos de una función
+(defn tiempo-ejecucion [f]
+  (let [inicio (System/nanoTime)
+        _ (f)
+        fin (System/nanoTime)]
+    (/ (- fin inicio) 1e6))) ; ms
 
-;; calcular calorías totales de una receta en base a ingredientes
-(defn calcular-calorias [ingredientes sistema factor]
-  (let [procesados (map (fn [linea]
-                          (let [regex #"^\s*(\d+(?:\s+\d+/\d+)?|\d+/\d+)?\s*(\w+)?\s*(.*)"
-                                [_ cantidad unidad nombre] (re-matches regex linea)]
-                            (if (and cantidad unidad nombre)
-                              (let [nueva (redondear-cantidad (escalar-numero cantidad factor))
-                                    datos (convertir-ingrediente nueva unidad nombre sistema)]
-                                (if (map? datos) (:calorias datos) 0))
-                              0)))
-                        ingredientes)]
-    (reduce + procesados)))
+;; guarda una receta procesada en un archivo HTML con conversiones, calorías y resaltado
+(defn guardar-html [ruta-html ruta-original opciones]
+  (let [{:keys [titulo meta ingredientes instrucciones]} (leer-receta ruta-original)
+        porciones-original (Integer/parseInt (or (:porciones opciones) "1"))
+        porciones-nuevas (Integer/parseInt (or (:porciones-nueva opciones) "1"))
+        factor (double (/ porciones-nuevas porciones-original))
+        temp-metric? (:temperatura opciones)
+        conversion-activa? (:convertir opciones)
+        total-calorias (atom 0)]
 
-;; genera HTML con todo, incluyendo calorías y receta original
-(defn generar-html-con-calorias [ruta opciones]
-  (let [{:keys [titulo meta ingredientes instrucciones]} (leer-receta ruta)
-        originales (obtener-porciones meta)
-        deseadas (:porciones opciones)
-        sistema (:sistema opciones)
-        factor (if (and originales (pos? originales)) (/ deseadas originales) 1)
-        calorias-totales (calcular-calorias ingredientes sistema factor)
-        calorias-porporcion (if (pos? deseadas) (int (/ calorias-totales deseadas)) calorias-totales)
-        original-html (str "<pre>" (str/join "\n" (leer-archivo ruta)) "</pre>")]
-    (str "<html><head><meta charset='UTF-8'></head><body>"
-         "<h1>" (span titulo :default) "</h1>"
-         "<h2>Contenido Original</h2>" original-html
-         "<h2>Detalles</h2><ul>"
-         (apply str (map #(str "<li>" (if (re-find #"(?i)serves" %) (span % :serves)
-                                       (resaltar-temperatura % opciones)) "</li>") meta))
-         "</ul>"
-         "<h2>Ingredientes</h2><ul>"
-         (apply str (map #(str "<li>" (resaltar-ingrediente % factor opciones) "</li>") ingredientes))
-         "</ul>"
-         "<p><b>Calorías totales:</b> " calorias-totales " kcal</p>"
-         "<p><b>Calorías por porción:</b> " calorias-porporcion " kcal</p>"
-         "<h2>Instrucciones</h2><ol>"
-         (apply str (map-indexed (fn [i paso]
-                                   (str "<li>" (span (str (inc i) ".") :step-number)
-                                        " " (resaltar-temperatura paso opciones) "</li>"))
-                                 instrucciones))
-         "</ol></body></html>")))
+    ;; función interna para procesar y resaltar una línea de ingrediente
+    (defn procesar-ingrediente [linea]
+      (let [regex #"^\s*(\d+(?:\s+\d+/\d+)?|\d+/\d+)?\s*(\w+)?\s*(.*)"
+            [_ cantidad unidad resto] (re-matches regex linea)
+            esc (when cantidad (escalar-cantidad cantidad factor))
+            info (if (and conversion-activa? cantidad unidad resto)
+                   (obtener-info esc unidad resto)
+                   {:gramos 0 :calorias 0})]
+        (swap! total-calorias + (:calorias info))
+        (str
+         (when esc (str (span (redondear esc) :quantity) " "))
+         (when unidad (str (span unidad :unit) " "))
+         (when resto (span resto :ingredient))
+         (when conversion-activa?
+           (str " (" (format "%.1f g, %.1f cal" (:gramos info) (:calorias info)) ")")))))
 
-;; guarda el HTML final
-(defn guardar-html [salida ruta opciones]
-  (spit salida (generar-html-con-calorias ruta opciones)))
+    ;; generar HTML final
+    (let [html (str "<html><head><meta charset='UTF-8'><title>" titulo "</title></head><body>"
+                    "<h1>" titulo "</h1>"
 
-;; procesamiento paralelo y medición de rendimiento
-(defn procesar-multiples-recetas []
-  (let [archivos-originales (->> (io/file "resources") .listFiles
-                                 (filter #(str/ends-with? (.getName %) ".txt")))
-        archivos-duplicados (take 100 (cycle archivos-originales))
-        opciones (procesar-opciones "opciones1.txt")
-        destino "src"]
+                    "<h3>Meta</h3><ul>"
+                    (apply str (map #(str "<li>" % "</li>") meta))
+                    "</ul>"
 
-    (time
-     (doseq [archivo archivos-duplicados]
-       (let [nombre (.getName archivo)
-             ruta (.getPath archivo)
-             nombre-html (str/replace nombre #"\.txt$" (str "-" (rand-int 1000000) ".html"))
-             ruta-html (str destino "/" nombre-html)]
-         (guardar-html ruta-html ruta opciones))))
+                    "<h3>Ingredientes (para " porciones-nuevas " porciones)</h3><ul>"
+                    (apply str (map #(str "<li>" (procesar-ingrediente %) "</li>") ingredientes))
+                    "</ul>"
 
-    (let [t-inicio (System/nanoTime)
-          trabajos (doall (map (fn [archivo]
-                                 (future
-                                   (let [nombre (.getName archivo)
-                                         ruta (.getPath archivo)
-                                         nombre-html (str/replace nombre #"\.txt$" (str "-" (rand-int 1000000) ".html"))
-                                         ruta-html (str destino "/" nombre-html)]
-                                     (guardar-html ruta-html ruta opciones))))
-                               archivos-duplicados))]
-      (doseq [t trabajos] @t)
-      (let [t-fin (System/nanoTime)
-            tiempo-ms (/ (- t-fin t-inicio) 1000000.0)]
-        (println "Tiempo total paralelo (ms):" tiempo-ms)))))
+                    "<h4>Total Calorías: " @total-calorias "</h4>"
+                    "<h4>Por porción: " (format "%.1f" (/ @total-calorias porciones-nuevas)) "</h4>"
+
+                    "<h3>Instrucciones</h3><ol>"
+                    (apply str
+                           (map #(str "<li>" (resaltar-temperaturas % temp-metric?) "</li>")
+                                instrucciones))
+                    "</ol>"
+
+                    "<hr><h3>Contenido Original</h3><pre>"
+                    (str/join "\n" (leer-archivo ruta-original))
+                    "</pre>"
+
+                    "</body></html>")]
+      (spit ruta-html html))))
+
+;; procesa en paralelo y secuencial 100 recetas, mostrando métricas de rendimiento
+(defn procesar-recetas-paralelo []
+  (let [directorio "resources"
+        salida-dir "src"
+        opciones (settings/procesar-opciones "opciones1.txt")
+        filtro (str/lower-case (:filtra opciones))
+        archivos-originales (filter #(and (.isFile %)
+                                          (str/ends-with? (.getName %) ".txt"))
+                                    (.listFiles (io/file directorio)))
+        archivos (duplicar-recetas archivos-originales)
+        procesar (fn [archivo]
+                   (let [ruta-in (.getPath archivo)
+                         receta (leer-receta ruta-in)
+                         texto (str/join " " (concat [(:titulo receta)]
+                                                     (:meta receta)
+                                                     (:ingredientes receta)
+                                                     (:instrucciones receta)))
+                         incluir? (or (= filtro "all")
+                                      (str/includes? (str/lower-case texto) filtro))]
+                     (when incluir?
+                       (let [nombre (.getName archivo)
+                             nombre-html (str/replace nombre #"\.txt$" (str "-" (System/nanoTime) ".html"))
+                             ruta-out (str salida-dir "/" nombre-html)]
+                         (guardar-html ruta-out ruta-in opciones)))))]
+
+    ;; medir y comparar tiempos
+    (let [tiempo-secuencial (tiempo-ejecucion #(doseq [a archivos] (procesar a)))
+          tiempo-paralelo   (tiempo-ejecucion #(doall (pmap procesar archivos)))
+          hilos             (.availableProcessors (Runtime/getRuntime))
+          speedup           (if (zero? tiempo-paralelo) 0 (/ tiempo-secuencial tiempo-paralelo))
+          eficiencia        (if (zero? hilos) 0 (/ speedup hilos))]
+      (println "Tiempo secuencial: " tiempo-secuencial "ms")
+      (println "Tiempo paralelo: " tiempo-paralelo "ms")
+      (println "Speedup: " speedup)
+      (println "Eficiencia: " eficiencia))))
+
+;; función principal que se puede ejecutar desde la terminal
+(defn -main []
+  (println "Procesando recetas...")
+  (procesar-recetas-paralelo))

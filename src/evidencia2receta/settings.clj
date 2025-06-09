@@ -1,56 +1,34 @@
-; opciones configurables
-(require '[clojure.string :as str]) 
+(ns evidencia2receta.settings
+  (:require [clojure.string :as str]))
 
-
-
-; funcion para leer el .txt
+;; Lee las líneas del archivo y las convierte a pares clave-valor
 (defn leer-opciones [archivo]
-  (let [lineas (-> archivo
-                   slurp
-                   str/split-lines)
-        pares (map #(str/split % #": ") lineas)
-        mapa (reduce (fn [acc [clave valor]]
-                       (assoc acc
-                              (keyword (str/trim clave))
-                              (cond
-                                (re-matches #"\d+" valor) (Integer/parseInt valor)
-                                (str/blank? valor) nil
-                                :else (str/trim valor))))
-                    {}
-                    pares)]
-    mapa))
+  (let [lineas (-> archivo slurp str/split-lines)
+        pares (map #(str/split % #":") lineas)]
+    (reduce (fn [acc [clave valor]]
+              (assoc acc
+                     (keyword (str/trim clave))
+                     (let [val (str/trim (or valor ""))]
+                       (cond
+                         (re-matches #"\d+" val) (Integer/parseInt val)
+                         (str/blank? val) nil
+                         :else val))))
+            {}
+            pares)))
 
-
-; sistema: metrico o tazas(incluye tsp y tbsp)
+;; Sistema: métrico o tazas (t para true/métrico)
 (defn metrOtz [opcion]
-    (if (= opcion "metric")
-        "t"
-        "f"
-    )
-)
+  (if (= opcion "metric") "t" "f"))
 
-; temperatura: Fahrenheit o Celsius
+;; Temperatura: Celsius o Fahrenheit
 (defn temperatura [opcion]
-    (if (= opcion "C")
-        "t"
-        "f"
-    )
-)
+  (if (= opcion "C") "t" "f"))
 
-; porciones: formula chida para poder dividir los ingredientes con las porciones para luego hacer ajustes
-
-
-; filtro: all, dessert, savory con un cond
-
+;; Procesa todas las opciones y devuelve el mapa esperado por core.clj
 (defn procesar-opciones [archivo]
   (let [opciones (leer-opciones archivo)]
-    {:sistema (metrOtz (:sistema opciones))
-     :temp (temperatura (:temp opciones))
-     :porciones  (:porciones opciones)
-     :filtra (:filtra opciones)
-     }))
-
-
-(procesar-opciones "opciones1.txt")
-
-;(leer-opciones "opciones1.txt")
+    {:temperatura     (temperatura (:temp opciones))
+     :convertir       (metrOtz (:sistema opciones))
+     :porciones       (:porciones opciones)
+     :porciones-nueva (:porciones-nueva opciones)
+     :filtra          (:filtra opciones)}))
