@@ -149,6 +149,12 @@
   (with-open [rdr (io/reader ruta)]
     (doall (line-seq rdr))))
 
+(defn extraer-porciones [meta-lineas]
+  (let [patron #"(?i)(serves|porciones|servings|yield):?\s*(\d+)"
+        coincidencias (keep #(re-matches patron %) meta-lineas)]
+    (if (seq coincidencias)
+      (Integer/parseInt (last (first coincidencias)))
+      1)))
 
 ;; lee y separa una receta en título, info adicional, ingredientes e instrucciones
 (defn leer-receta [ruta]
@@ -159,11 +165,13 @@
         [_ & resto2] resto1
         ;; busca encabezado de instrucciones (permite "Instructions", "Instructions:", etc.)
         [ingredientes resto3] (split-with #(not (re-find #"(?i)^instructions[:]? *$" %)) resto2)
-        [_ & instrucciones] resto3]
+        [_ & instrucciones] resto3
+        porciones (extraer-porciones meta)]
     {:titulo (str/trim titulo)
      :meta (remove str/blank? meta)
      :ingredientes (remove str/blank? ingredientes)
-     :instrucciones (remove str/blank? instrucciones)}))
+     :instrucciones (remove str/blank? instrucciones)
+     :porciones porciones}))
 
 
 ;; duplica las recetas para simular un conjunto grande de archivos
@@ -179,9 +187,9 @@
 
 ;; guarda una receta procesada en un archivo HTML con conversiones, calorías y resaltado
 (defn guardar-html [ruta-html ruta-original opciones]
-  (let [{:keys [titulo meta ingredientes instrucciones]} (leer-receta ruta-original)
-        porciones-original (int (or (:porciones opciones) 1))
-        porciones-nuevas   (int (or (:porciones-nueva opciones) 1))
+  (let [{:keys [titulo meta ingredientes instrucciones porciones]} (leer-receta ruta-original)
+        porciones-original (int (or porciones 1))
+        porciones-nuevas   (int (or (:porciones-nueva opciones) porciones-original))
         factor (double (/ porciones-nuevas porciones-original))
         temp-metric? (:temperatura opciones)
         conversion-activa? (:convertir opciones)
@@ -249,7 +257,7 @@
                     (apply str (map #(str "<li>" % "</li>") meta))
                     "</ul>"
 
-                    "<h3>Ingredientes (para " porciones-nuevas " porciones)</h3><ul>"
+                    "<h3>Ingredientes (originalmente para " porciones-original " porciones, ajustado para " porciones-nuevas " porciones)</h3><ul>"
                     (apply str (map #(str "<li>" (procesar-ingrediente %) "</li>") ingredientes))
                     "</ul>"
 
