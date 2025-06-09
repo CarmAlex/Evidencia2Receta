@@ -150,8 +150,8 @@
     (doall (line-seq rdr))))
 
 (defn extraer-porciones [meta-lineas]
-  (let [patron #"(?i)(serves|porciones|servings|yield):?\s*(\d+)"
-        coincidencias (keep #(re-matches patron %) meta-lineas)]
+  (let [patron #"(?i)(serves|porciones|servings|yield|makes|para|for)[: \-]*(\d+)"
+        coincidencias (keep #(re-find patron %) meta-lineas)]
     (if (seq coincidencias)
       (Integer/parseInt (last (first coincidencias)))
       1)))

@@ -30,5 +30,5 @@
   (let [opciones (leer-opciones archivo)]
     {:temperatura     (temperatura (:temp opciones))
      :convertir       (metrOtz (:sistema opciones))
-     :porciones-nueva (Integer/parseInt (:porciones opciones))
+     :porciones-nueva (:porciones opciones)
      :filtra          (:filtra opciones)}))
