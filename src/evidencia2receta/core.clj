@@ -166,7 +166,7 @@
         ;; busca encabezado de instrucciones (permite "Instructions", "Instructions:", etc.)
         [ingredientes resto3] (split-with #(not (re-find #"(?i)^instructions[:]? *$" %)) resto2)
         [_ & instrucciones] resto3
-        porciones (extraer-porciones meta)]
+        porciones (extraer-porciones (concat [titulo] meta))]
     {:titulo (str/trim titulo)
      :meta (remove str/blank? meta)
      :ingredientes (remove str/blank? ingredientes)
@@ -188,8 +188,8 @@
 ;; guarda una receta procesada en un archivo HTML con conversiones, calorías y resaltado
 (defn guardar-html [ruta-html ruta-original opciones]
   (let [{:keys [titulo meta ingredientes instrucciones porciones]} (leer-receta ruta-original)
-        porciones-original (int (or porciones 1))
-        porciones-nuevas   (int (or (:porciones-nueva opciones) porciones-original))
+        porciones-original (max 1 porciones)
+        porciones-nuevas   (:porciones-nueva opciones)
         factor (double (/ porciones-nuevas porciones-original))
         temp-metric? (:temperatura opciones)
         conversion-activa? (:convertir opciones)
