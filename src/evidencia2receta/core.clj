@@ -109,7 +109,7 @@
                #"(?i)(\d+)\s*°F"
                (fn [[_ fstr]]
                  (let [f (Double/parseDouble fstr)
-                       convertido (if (= temp-metric? "t")
+                       convertido (if temp-metric?
                                     (format "%.1f °C" (fAc f))
                                     (str f " °F"))]
                    (span convertido :temperature)))))
@@ -217,7 +217,7 @@
              (str/replace #"\s+" " ")
              str/trim)
  
-         info (if (and conversion-activa? escalar unidad-norm ingrediente-limpio)
+         info (if (and conversion-activa? escalar (not (str/blank? unidad-norm)) (not (str/blank? ingrediente-limpio)))
                 (obtener-info escalar unidad-norm ingrediente-limpio)
                 {:gramos 0 :calorias 0})]
  
@@ -226,9 +226,9 @@
      ;; genera línea HTML
      (str
       (when esc (str (span esc :quantity) " "))
-      (when unidad-norm (str (span unidad-norm :unit) " "))
+      (when (not (str/blank? unidad-norm)) (str (span unidad-norm :unit) " "))
       (when bruto (span bruto :ingredient))
-      (when conversion-activa?
+      (when (and conversion-activa? (> (:gramos info) 0))
         (str " (" (format "%.1f g, %.1f cal"
                           (double (:gramos info))
                           (double (:calorias info))) ")")))))

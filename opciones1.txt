@@ -1,5 +1,5 @@
 sistema: metric
 temp: C
 porciones: 4
-porciones-nueva: 4
+porciones-nueva: 6
 filtra: all
