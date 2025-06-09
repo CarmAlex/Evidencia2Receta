@@ -191,49 +191,48 @@
  (defn procesar-ingrediente [linea]
    (let [regex #"^\s*(\d+(?:\s+\d+/\d+)?|\d+/\d+)?\s*([a-zA-Z]+)?\s+(.*)"
          [_ cantidad unidad bruto] (re-matches regex linea)
-         esc (when cantidad (escalar-cantidad cantidad factor))
+         escalar (when cantidad (escalar-cantidad cantidad factor))
+         esc (when escalar (redondear escalar))
  
-         ;; normaliza unidad (ej: tablespoons → tbsp)
-         ;; normaliza unidad correctamente
-unidad-norm (-> (or unidad "")
-                str/lower-case
-                (str/replace #"tablespoons?" "tbsp")
-                (str/replace #"teaspoons?" "tsp")
-                (str/replace #"ounces?" "oz")
-                (str/replace #"cups?" "cup")
-                (str/replace #"pints?" "pint")
-                (str/replace #"pounds?" "lb")
-                (str/replace #"cloves?" "clove")
-                (str/replace #"dashes?" "dash")
-                (str/replace #"eggs?" "egg") ; mueve esto al final
-                (str/replace #"large|small|medium" "") 
-                (str/replace #"s$" "")
-                str/trim)
-
+         ;; normaliza unidad
+         unidad-norm (-> (or unidad "")
+                         str/lower-case
+                         (str/replace #"tablespoons?" "tbsp")
+                         (str/replace #"teaspoons?" "tsp")
+                         (str/replace #"ounces?" "oz")
+                         (str/replace #"cups?" "cup")
+                         (str/replace #"pints?" "pint")
+                         (str/replace #"pounds?" "lb")
+                         (str/replace #"cloves?" "clove")
+                         (str/replace #"eggs?" "egg")
+                         (str/replace #"dashes?" "dash")
+                         (str/replace #"s$" ""))
+ 
          ;; limpia nombre del ingrediente
          ingrediente-limpio
          (-> bruto
              str/lower-case
-             (str/replace #"(?i)chopped|fresh|large|small|medium|diced|sliced|minced|unsalted|extra-virgin|clove[s]?|kosher|dark|white wine|sea|sifted|for dusting|vanilla$" "")
-             (str/replace #"[,*\(\)].*" "")  ; remueve paréntesis, comas y notas
-             (str/replace #"\s+" " ")        ; normaliza espacios
+             (str/replace #"(?i)chopped|fresh|large|small|diced|sliced|minced|unsalted|extra-virgin|clove[s]?|kosher|dark|white wine|sea|sifted|for dusting" "")
+             (str/replace #"[,*\(\)].*" "")
+             (str/replace #"\s+" " ")
              str/trim)
  
-         info (if (and conversion-activa? esc unidad-norm ingrediente-limpio)
-                (obtener-info esc unidad-norm ingrediente-limpio)
+         info (if (and conversion-activa? escalar unidad-norm ingrediente-limpio)
+                (obtener-info escalar unidad-norm ingrediente-limpio)
                 {:gramos 0 :calorias 0})]
  
      (swap! total-calorias + (:calorias info))
  
-     ;; genera HTML
+     ;; genera línea HTML
      (str
-      (when esc (str (span (redondear esc) :quantity) " "))
-      (when unidad (str (span unidad :unit) " "))
+      (when esc (str (span esc :quantity) " "))
+      (when unidad-norm (str (span unidad-norm :unit) " "))
       (when bruto (span bruto :ingredient))
       (when conversion-activa?
         (str " (" (format "%.1f g, %.1f cal"
                           (double (:gramos info))
                           (double (:calorias info))) ")")))))
+
 
 
 
