@@ -287,31 +287,45 @@
                                           (str/ends-with? (.getName %) ".txt"))
                                     (.listFiles (io/file directorio)))
         archivos (duplicar-recetas archivos-originales)
+
+        ;; Filtra archivos que contienen el texto buscado
+        archivos-filtrados
+        (filter (fn [archivo]
+                  (let [ruta-in (.getPath archivo)
+                        receta (leer-receta ruta-in)
+                        texto (str/join " " (concat [(:titulo receta)]
+                                                    (:meta receta)
+                                                    (:ingredientes receta)
+                                                    (:instrucciones receta)))]
+                    (or (= filtro "all")
+                        (str/includes? (str/lower-case texto) filtro))))
+                archivos)
+
+        ;; Función pura para procesar un archivo (sin efectos secundarios)
         procesar (fn [archivo]
                    (let [ruta-in (.getPath archivo)
-                         receta (leer-receta ruta-in)
-                         texto (str/join " " (concat [(:titulo receta)]
-                                                     (:meta receta)
-                                                     (:ingredientes receta)
-                                                     (:instrucciones receta)))
-                         incluir? (or (= filtro "all")
-                                      (str/includes? (str/lower-case texto) filtro))]
-                     (when incluir?
-                       (let [nombre (.getName archivo)
-                             nombre-html (str/replace nombre #"\.txt$" (str "-" (System/nanoTime) ".html"))
-                             ruta-out (str salida-dir "/" nombre-html)]
-                         (guardar-html ruta-out ruta-in opciones)))))]
+                         nombre (.getName archivo)
+                         nombre-html (str/replace nombre #"\.txt$" (str "-" (System/nanoTime) ".html"))
+                         ruta-out (str salida-dir "/" nombre-html)]
+                     (guardar-html ruta-out ruta-in opciones)))]
 
-    ;; medir y comparar tiempos
-    (let [tiempo-secuencial (tiempo-ejecucion #(doseq [a archivos] (procesar a)))
-          tiempo-paralelo   (tiempo-ejecucion #(doall (pmap procesar archivos)))
-          hilos             (.availableProcessors (Runtime/getRuntime))
-          speedup           (if (zero? tiempo-paralelo) 0 (/ tiempo-secuencial tiempo-paralelo))
-          eficiencia        (if (zero? hilos) 0 (/ speedup hilos))]
+    ;; medir tiempos 
+    (let [tiempo-secuencial
+          (tiempo-ejecucion #(doall (map procesar archivos-filtrados)))
+
+          tiempo-paralelo
+          (tiempo-ejecucion #(doall (pmap procesar archivos-filtrados)))
+
+          hilos (.availableProcessors (Runtime/getRuntime))
+          speedup (if (zero? tiempo-paralelo) 0 (/ tiempo-secuencial tiempo-paralelo))
+          eficiencia (if (zero? hilos) 0 (/ speedup hilos))]
+
+      (println "Recetas filtradas que se procesaron: " (count archivos-filtrados))
       (println "Tiempo secuencial: " tiempo-secuencial "ms")
       (println "Tiempo paralelo: " tiempo-paralelo "ms")
       (println "Speedup: " speedup)
       (println "Eficiencia: " eficiencia))))
+
 
 ;; función principal que se puede ejecutar desde la terminal
 (defn -main []
