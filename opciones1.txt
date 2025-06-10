@@ -2,5 +2,4 @@ sistema: metric
 temp: C
 porciones: 6
 filtra: all
-filtra: chocolate
-filtra: vanilla
+filtra:avion

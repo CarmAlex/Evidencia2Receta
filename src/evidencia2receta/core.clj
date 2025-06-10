@@ -279,52 +279,55 @@
 
 ;; procesa en paralelo y secuencial 100 recetas, mostrando métricas de rendimiento
 (defn procesar-recetas-paralelo []
-  (let [directorio "resources"
-        salida-dir "src"
-        opciones (settings/procesar-opciones "opciones1.txt")
-        filtro (str/lower-case (:filtra opciones))
-        archivos-originales (filter #(and (.isFile %)
-                                          (str/ends-with? (.getName %) ".txt"))
-                                    (.listFiles (io/file directorio)))
-        archivos (duplicar-recetas archivos-originales)
+   (let [directorio "resources"
+         salida-dir "src"
+         opciones (settings/procesar-opciones "opciones1.txt")
+         filtro (str/lower-case (:filtra opciones))
+         archivos-originales (filter #(and (.isFile %)
+                                           (str/ends-with? (.getName %) ".txt"))
+                                     (.listFiles (io/file directorio)))
+         archivos (duplicar-recetas archivos-originales)
 
-        ;; Filtra archivos que contienen el texto buscado
-        archivos-filtrados
-        (filter (fn [archivo]
-                  (let [ruta-in (.getPath archivo)
-                        receta (leer-receta ruta-in)
-                        texto (str/join " " (concat [(:titulo receta)]
-                                                    (:meta receta)
-                                                    (:ingredientes receta)
-                                                    (:instrucciones receta)))]
-                    (or (= filtro "all")
-                        (str/includes? (str/lower-case texto) filtro))))
-                archivos)
-
-        ;; Función pura para procesar un archivo (sin efectos secundarios)
-        procesar (fn [archivo]
+         ;; Filtra archivos que contienen el texto buscado
+         archivos-filtrados
+         (filter (fn [archivo]
                    (let [ruta-in (.getPath archivo)
-                         nombre (.getName archivo)
-                         nombre-html (str/replace nombre #"\.txt$" (str "-" (System/nanoTime) ".html"))
-                         ruta-out (str salida-dir "/" nombre-html)]
-                     (guardar-html ruta-out ruta-in opciones)))]
+                         receta (leer-receta ruta-in)
+                         texto (str/join " " (concat [(:titulo receta)]
+                                                     (:meta receta)
+                                                     (:ingredientes receta)
+                                                     (:instrucciones receta)))]
+                     (or (= filtro "all")
+                         (str/includes? (str/lower-case texto) filtro))))
+                 archivos)
 
-    ;; medir tiempos 
-    (let [tiempo-secuencial
-          (tiempo-ejecucion #(doall (map procesar archivos-filtrados)))
+         ;; Función pura para procesar un archivo
+         procesar (fn [archivo]
+                    (let [ruta-in (.getPath archivo)
+                          nombre (.getName archivo)
+                          nombre-html (str/replace nombre #"\.txt$" (str "-" (System/nanoTime) ".html"))
+                          ruta-out (str salida-dir "/" nombre-html)]
+                      (guardar-html ruta-out ruta-in opciones)))]
 
-          tiempo-paralelo
-          (tiempo-ejecucion #(doall (pmap procesar archivos-filtrados)))
+     ;; si no hay recetas filtradas, avisamos
+     (if (empty? archivos-filtrados)
+       (println (str " No se encontraron recetas que coincidan con el filtro: \"" filtro "\""))
+       (let [tiempo-secuencial
+             (tiempo-ejecucion #(doall (map procesar archivos-filtrados)))
 
-          hilos (.availableProcessors (Runtime/getRuntime))
-          speedup (if (zero? tiempo-paralelo) 0 (/ tiempo-secuencial tiempo-paralelo))
-          eficiencia (if (zero? hilos) 0 (/ speedup hilos))]
+             tiempo-paralelo
+             (tiempo-ejecucion #(doall (pmap procesar archivos-filtrados)))
 
-      (println "Recetas filtradas que se procesaron: " (count archivos-filtrados))
-      (println "Tiempo secuencial: " tiempo-secuencial "ms")
-      (println "Tiempo paralelo: " tiempo-paralelo "ms")
-      (println "Speedup: " speedup)
-      (println "Eficiencia: " eficiencia))))
+             hilos (.availableProcessors (Runtime/getRuntime))
+             speedup (if (zero? tiempo-paralelo) 0 (/ tiempo-secuencial tiempo-paralelo))
+             eficiencia (if (zero? hilos) 0 (/ speedup hilos))]
+
+         (println "Recetas filtradas que se procesaron: " (count archivos-filtrados))
+         (println "Tiempo secuencial: " tiempo-secuencial "ms")
+         (println "Tiempo paralelo: " tiempo-paralelo "ms")
+         (println "Speedup: " speedup)
+         (println "Eficiencia: " eficiencia)))))
+
 
 
 ;; función principal que se puede ejecutar desde la terminal
