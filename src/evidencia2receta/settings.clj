@@ -16,10 +16,15 @@
             {}
             pares)))
 
-;; Sistema: métrico o tazas (t para true/métrico)
+;; Sistema: métrico o tazas
 (defn metrOtz [opcion]
-  (= opcion "metric"))
-
+  (cond
+  (= opcion "metric") :toMetric
+  (= opcion "cup") :toImp
+  (= opcion "imperial") :toImp
+  :else :none
+)
+)
 ;; Temperatura: Celsius o Farenheit
 (defn temperatura [opcion]
   (= opcion "C"))

@@ -1,5 +1,4 @@
-sistema: metric
+sistema:imperial
 temp: C
-porciones: 6
-filtra: all
-filtra:avion
+porciones: 10
+filtra:all
