@@ -359,7 +359,7 @@
          archivos-originales (filter #(and (.isFile %)
                                            (str/ends-with? (.getName %) ".txt"))
                                      (.listFiles (io/file directorio)))
-         archivos (duplicar-recetas archivos-originales)
+         archivos (take 100 (cycle archivos-originales))
 
          ;; Filtra archivos que contienen el texto buscado
          archivos-filtrados
@@ -401,10 +401,63 @@
          (println "Speedup: " speedup)
          (println "Eficiencia: " eficiencia)))))
 
+; evalúa el pararelismo para hacer varias iteraciónes con diferentes hilos y despues para hacer los grafos
+(defn evaluar-paralelismo []
+  (let [directorio "resources"
+        opciones (settings/procesar-opciones "opciones1.txt")
+        filtro (str/lower-case (:filtra opciones))
+        archivos-originales (filter (fn [f]
+                                      (and (.isFile f)
+                                           (str/ends-with? (.getName f) ".txt")))
+                                    (.listFiles (io/file directorio)))
+        archivos (take 100 (cycle archivos-originales)) ;; exactamente 100 archivos
+        archivos-filtrados (filter (fn [archivo]
+                                     (let [ruta-in (.getPath archivo)
+                                           receta (leer-receta ruta-in)
+                                           texto (str/join " " (concat [(:titulo receta)]
+                                                                       (:meta receta)
+                                                                       (:ingredientes receta)
+                                                                       (:instrucciones receta)))]
+                                       (or (= filtro "all")
+                                           (str/includes? (str/lower-case texto) filtro))))
+                                   archivos)
+
+        ;; solo procesa
+        simular-procesar (fn [archivo]
+                           (let [ruta-in (.getPath archivo)]
+                             ;; PARA QUE NO SE GENEREN 1000 ARCHIVOS SJSJ
+                             (leer-receta ruta-in)))
+
+        n-archs (count archivos-filtrados)
+        hilos-a-probar [1 2 4 6 8 12 16]
+        tiempo-secuencial (tiempo-ejecucion #(doall (map simular-procesar archivos-filtrados)))]
+
+    (println "\nTiempo secuencial base: " (format "%.2f" tiempo-secuencial) "ms")
+    (println "Hilos\tTiempo(ms)\tSpeedup\tEficiencia")
+
+    (doseq [n hilos-a-probar]
+      (when (<= n n-archs)
+        (let [partes (partition-all (int (Math/ceil (/ (double n-archs) n))) archivos-filtrados)
+              futuros (map (fn [sublista]
+                             (future (doall (map simular-procesar sublista))))
+                           partes)
+              tiempo (tiempo-ejecucion #(doall (map deref futuros)))
+              speedup (/ tiempo-secuencial tiempo)
+              eficiencia (/ speedup n)]
+          (println n "\t" (format "%.2f" tiempo)
+                   "\t\t" (format "%.2f" speedup)
+                   "\t" (format "%.2f" eficiencia)))))))
 
 
-;; función principal que se puede ejecutar desde la terminal
+
+
+
+
+
+;; función principal 
 (defn -main []
   (println "Procesando recetas...")
-  (procesar-recetas-paralelo))
-; :)
+  (procesar-recetas-paralelo)
+  (println "Evaluando paralelismo...")
+  (evaluar-paralelismo)
+  )

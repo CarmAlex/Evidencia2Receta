@@ -1,4 +1,4 @@
 sistema:imperial
 temp: C
-porciones: 10
-filtra:all
+porciones: 6
+filtra: all
