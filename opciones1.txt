@@ -1,4 +1,4 @@
-sistema:imperial
+sistema: metric
 temp: C
 porciones: 6
 filtra: all

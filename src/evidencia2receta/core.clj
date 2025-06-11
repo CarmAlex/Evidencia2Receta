@@ -134,8 +134,13 @@
 ;; obtiene la información de gramos y calorías para una cantidad dada de un ingrediente
 (defn obtener-info [cantidad unidad ingrediente]
   (let [unidad (str/lower-case (or unidad ""))
-        ingrediente (str/lower-case (or ingrediente ""))]
-    (if-let [info (get-in conversiones [unidad ingrediente])]
+        ingrediente (-> ingrediente
+                       str/lower-case
+                       (str/replace #"of\s+" "")
+                       str/trim)
+        ingrediente-key (first (filter #(str/includes? ingrediente %) 
+                                     (keys (get conversiones unidad {}))))]
+    (if-let [info (get-in conversiones [unidad ingrediente-key])]
       {:gramos (double (* cantidad (:gramos info)))
        :calorias (double (* cantidad (:calorias info)))}
       {:gramos 0.0 :calorias 0.0})))
@@ -273,7 +278,7 @@
          ingrediente-limpio
          (-> bruto
              str/lower-case
-             ;(str/replace #"(?i)chopped|fresh|large|small|diced|sliced|minced|unsalted|extra-virgin|clove[s]?|kosher|dark|white wine|sea|sifted|for dusting" "")
+             (str/replace #"(?i)chopped|fresh|large|small|diced|sliced|minced|unsalted|extra-virgin|clove[s]?|kosher|dark|white wine|sea|sifted|for dusting" "")
              (str/replace #"[,*\(\)].*" "")
              (str/replace #"\s+" " ")
              str/trim)

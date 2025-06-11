@@ -14,7 +14,8 @@
                          (str/blank? val) nil
                          :else val))))
             {}
-            pares)))
+            pares))    
+  )
 
 ;; Sistema: métrico o tazas
 (defn metrOtz [opcion]
