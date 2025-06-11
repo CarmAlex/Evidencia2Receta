@@ -1,3 +1,5 @@
+
+; Evidencia 2 Recetas - Carlos Manuel Olivarez Monroy - Carmen Banda Juarez
 (ns evidencia2receta.core
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
@@ -110,7 +112,7 @@
 (defn gramos-a-imperial [gramos ingrediente]
   (let [ingrediente-key (-> ingrediente
                            str/lower-case
-                           (str/replace #"of\s+" "")  ; Elimina "of" si existe
+                           (str/replace #"of\s+" "")  ; elimina "of" si existe
                            str/trim)
         conversions (get conversInv ingrediente-key)]
     (when (and conversions (> gramos 0))
